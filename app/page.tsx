@@ -52,7 +52,7 @@ const CHIANG_MAI_DISTRICTS = [
 ];
 
 // *** ตรวจสอบและใส่ Web App URL ของท่านตรงนี้ ***
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz_svWuKBgvw6tsa3kPAis4saZZAf4odPWhasf9D8WlzQ6BuJG70EqwKqkahoRdh_RU/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyr2LneMXl8D_L-1vMvCCpLFXz8ySZNxiHUi9arRRke2FKkf-H07W8zh6z2eU6_OcOa/exec";
 
 // ฟังก์ชันแปลง ค.ศ. (YYYY-MM-DD) เป็น วัน/เดือน/พ.ศ.
 const formatToThaiDate = (isoDate: string) => {
