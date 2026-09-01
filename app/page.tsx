@@ -1,60 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar, Camera, BarChart3, RefreshCw, Layers } from "lucide-react";
+import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar, Camera, BarChart3, RefreshCw, Layers, BookOpen } from "lucide-react";
 
-// รายการหมวดหมู่กิจกรรม PA 2570
 const PA_ACTIVITIES = [
-  { id: "1K82qP0IeKyS40jzDcv4dA-cfcur0zxmw", label: "ส่วนที่ 2 ข้อตกลงตามตำแหน่ง 70" },
-  { id: "1bPJCLdTWKD2yMYQXvXcZNs__m-W9jAMV", label: "ส่วนที่ 3 ข้อตกลงตามประเด็นท้าทาย 70" },
-  { id: "1jQr7TAd_GSZ3rp2X7P__smuh_Ki1Epwx", label: "ส่วนที่ 4 รายงานการวิจัย 70" },
-  { id: "1p3dtwzRUiuYa5vhyW1-W3cPAVISNx0GL", label: "ส่วนที่ 5 การเขียนบทความ 70" },
-  { id: "1A7HKOYxPxyI64lcOPj1JTWkBxUpkwSZQ", label: "ส่วนที่ 6 Youtube 70" },
-  { id: "11ypLZxbYSQ1pgx5Ucvldhv7UpyojYMN_", label: "ส่วนที่ 7 การเป็นวิทยากร 70" },
-  { id: "18YtNXoitAQ6YbhhUPm2a1B_BZe6JQun-", label: "ส่วนที่ 8 ชั้นหนังสือออนไลน์ 70" },
-  { id: "1weieOmSg_4t55SzbdXux7aMSoLW5WEHi", label: "ส่วนที่ 9 การพัฒนาตนเอง 70" },
-  { id: "1JZDMPICYQMpCuSrw0FfSzywicp4z1KOQ", label: "ส่วนที่ 10 การนิเทศโรงเรียน 70" },
-  { id: "1BgMIQdvAtb1XlLkq-eoE_ABITUFX3oTP", label: "ส่วนที่ 11 Assessment Talk 70" },
-  { id: "1Ejg77Vhch7kaRCSllencBx98fHzpb8yK", label: "ส่วนที่ 12 Google Classroom 70" },
-  { id: "1pvLao9eWo1tsYekjqliw7R_wmIbd4Bus", label: "ส่วนที่ 13 AI for education 70" },
-  { id: "18zTgRAr5_Uq7DZpYrijV_oykUvLqq7K5", label: "ส่วนที่ 14 Story book 70" },
-  { id: "17I_A1UxeVsbBlVttc2dgGRSOrd4yt-eO", label: "ส่วนที่ 15 PISA 2029 70" },
-  { id: "1GXKnx3_gyEv5B-fXAhEADMWA_8Lxt8Yb", label: "ส่วนที่ 16 AI for digital art 70" },
+  { id: "1JZDMPICYQMpCuSrw0FfSzywicp4z1KOQ", label: "ส่วนที่ 10 การนิเทศโรงเรียน 70", type: "supervision" },
+  { id: "1weieOmSg_4t55SzbdXux7aMSoLW5WEHi", label: "ส่วนที่ 9 การพัฒนาตนเอง 70", type: "selfDev" },
 ];
 
-// รายชื่อ 25 อำเภอในจังหวัดเชียงใหม่
 const CHIANG_MAI_DISTRICTS = [
-  "เมืองเชียงใหม่",
-  "จอมทอง",
-  "แม่แจ่ม",
-  "เชียงดาว",
-  "ดอยสะเก็ด",
-  "แม่แตง",
-  "แม่ริม",
-  "สะเมิง",
-  "ฝาง",
-  "แม่อาย",
-  "พร้าว",
-  "สันป่าตอง",
-  "สันกำแพง",
-  "สันทราย",
-  "หางดง",
-  "ฮอด",
-  "ดอยเต่า",
-  "อมก๋อย",
-  "สารภี",
-  "เวียงแหง",
-  "ไชยปราการ",
-  "แม่วาง",
-  "แม่ออน",
-  "ดอยหล่อ",
-  "กัลยาณิวัฒนา"
+  "เมืองเชียงใหม่", "จอมทอง", "แม่แจ่ม", "เชียงดาว", "ดอยสะเก็ด", "แม่แตง", "แม่ริม", "สะเมิง", 
+  "ฝาง", "แม่อาย", "พร้าว", "สันป่าตอง", "สันกำแพง", "สันทราย", "หางดง", "ฮอด", "ดอยเต่า", 
+  "อมก๋อย", "สารภี", "เวียงแหง", "ไชยปราการ", "แม่วาง", "แม่ออน", "ดอยหล่อ", "กัลยาณิวัฒนา", "ออนไลน์ / อื่นๆ"
 ];
 
-// *** ตรวจสอบและใส่ Web App URL ของท่านตรงนี้ ***
+// *** ใส่ Web App URL ของท่านตรงนี้ ***
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyr2LneMXl8D_L-1vMvCCpLFXz8ySZNxiHUi9arRRke2FKkf-H07W8zh6z2eU6_OcOa/exec";
 
-// ฟังก์ชันแปลง ค.ศ. (YYYY-MM-DD) เป็น วัน/เดือน/พ.ศ.
 const formatToThaiDate = (isoDate: string) => {
   if (!isoDate) return "";
   const [year, month, day] = isoDate.split("-");
@@ -64,11 +26,12 @@ const formatToThaiDate = (isoDate: string) => {
 
 export default function SupervisionFormPage() {
   const [rawDate, setRawDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedActivityId, setSelectedActivityId] = useState(PA_ACTIVITIES[0].id);
+  
   const [formData, setFormData] = useState({
     time: "09:00",
     district: CHIANG_MAI_DISTRICTS[0],
     schoolName: "",
-    activityFolderId: PA_ACTIVITIES[8].id,
     objective: "",
     strengths: "",
     improvements: "",
@@ -82,6 +45,9 @@ export default function SupervisionFormPage() {
   const [historyLogs, setHistoryLogs] = useState<any[]>([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
 
+  // เช็กว่าเป็นโหมดพัฒนาตนเองหรือไม่
+  const isSelfDev = selectedActivityId === PA_ACTIVITIES[1].id;
+
   const fetchHistory = async () => {
     if (!GAS_API_URL || GAS_API_URL.includes("วาง_WEB_APP_URL")) return;
     setIsFetchingHistory(true);
@@ -92,7 +58,7 @@ export default function SupervisionFormPage() {
         setHistoryLogs(result.data);
       }
     } catch (e) {
-      console.log("Fetch history standby");
+      console.log("Fetch standby");
     } finally {
       setIsFetchingHistory(false);
     }
@@ -144,13 +110,15 @@ export default function SupervisionFormPage() {
     setIsLoading(true);
 
     const thaiFormattedDate = formatToThaiDate(rawDate);
-    const activityObj = PA_ACTIVITIES.find((a) => a.id === formData.activityFolderId);
+    const activityObj = PA_ACTIVITIES.find((a) => a.id === selectedActivityId);
     
     const payload = {
       ...formData,
-      date: thaiFormattedDate, // ส่งวันที่ในรูปแบบ วัน/เดือน/พ.ศ.
-      time: `${formData.time} น.`, // ส่งเวลาในระบบ 24 ชม. พร้อมระบุ น.
+      formType: isSelfDev ? "selfDev" : "supervision",
+      activityFolderId: selectedActivityId,
       activityLabel: activityObj?.label || "",
+      date: thaiFormattedDate,
+      time: `${formData.time} น.`,
       photoBase64: photoBase64,
     };
 
@@ -162,7 +130,7 @@ export default function SupervisionFormPage() {
         body: JSON.stringify(payload),
       });
 
-      setSuccessMsg("บันทึกข้อมูล ภาพถ่าย และสร้าง Google Docs สำเร็จเรียบร้อย!");
+      setSuccessMsg("บันทึกข้อมูลและสร้างเอกสารลง Google Drive เรียบร้อย!");
       setPhotoBase64("");
       setPhotoPreview("");
       setFormData((prev) => ({
@@ -191,11 +159,11 @@ export default function SupervisionFormPage() {
       <header className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <School className="w-8 h-8" />
+            {isSelfDev ? <BookOpen className="w-8 h-8" /> : <School className="w-8 h-8" />}
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-slate-900">
-              ระบบบันทึกการนิเทศออนไลน์ (Supervision Log)
+              {isSelfDev ? "ระบบบันทึกการพัฒนาตนเองและวิชาชีพ" : "ระบบบันทึกการนิเทศออนไลน์ (Supervision Log)"}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               นายรัชภูมิ สมสมัย ศึกษานิเทศก์ สำนักงานศึกษาธิการจังหวัดเชียงใหม่
@@ -209,14 +177,14 @@ export default function SupervisionFormPage() {
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><BarChart3 className="w-5 h-5" /></div>
           <div>
-            <div className="text-xs text-slate-500">จำนวนการนิเทศทั้งหมด</div>
-            <div className="text-xl font-bold text-slate-900">{historyLogs.length} ครั้ง</div>
+            <div className="text-xs text-slate-500">บันทึกทั้งหมด</div>
+            <div className="text-xl font-bold text-slate-900">{historyLogs.length} รายการ</div>
           </div>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><School className="w-5 h-5" /></div>
           <div>
-            <div className="text-xs text-slate-500">โรงเรียนที่เข้านิเทศ</div>
+            <div className="text-xs text-slate-500">หน่วยงาน/โรงเรียน</div>
             <div className="text-xl font-bold text-slate-900">
               {new Set(historyLogs.map((l) => l.schoolName)).size} แห่ง
             </div>
@@ -226,8 +194,8 @@ export default function SupervisionFormPage() {
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><Layers className="w-5 h-5" /></div>
             <div>
-              <div className="text-xs text-slate-500">สถานะฐานข้อมูล</div>
-              <div className="text-xs font-semibold text-emerald-600">Google Drive เชื่อมต่อแล้ว</div>
+              <div className="text-xs text-slate-500">โหมดปัจจุบัน</div>
+              <div className="text-xs font-semibold text-blue-600">{isSelfDev ? "ส่วนที่ 9 พัฒนาตนเอง" : "ส่วนที่ 10 นิเทศโรงเรียน"}</div>
             </div>
           </div>
           <button onClick={fetchHistory} title="รีเฟรชประวัติ" className="text-slate-400 hover:text-slate-700">
@@ -243,20 +211,37 @@ export default function SupervisionFormPage() {
         </div>
       )}
 
-      {/* ฟอร์มบันทึก */}
+      {/* แบบฟอร์ม Dynamic */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* เลือกหมวดหมู่กิจกรรม */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-2">
+              <FolderCheck className="w-4 h-4 text-amber-600" />
+              เลือกประเภทกิจกรรม (PA 2570) *
+            </label>
+            <select
+              value={selectedActivityId}
+              onChange={(e) => setSelectedActivityId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500"
+            >
+              {PA_ACTIVITIES.map((act) => (
+                <option key={act.id} value={act.id}>{act.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* หมวดที่ 1: ข้อมูลทั่วไป */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <Calendar className="w-4 h-4 text-blue-600" />
-              1. ข้อมูลทั่วไปและการลงพื้นที่
+              {isSelfDev ? "1. ข้อมูลการเข้าร่วมกิจกรรมพัฒนาตนเอง" : "1. ข้อมูลทั่วไปและการลงพื้นที่"}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              {/* 1. วันที่นิเทศ (แสดง พ.ศ. กำกับ) */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">
-                  วันที่นิเทศ * <span className="text-blue-600 font-normal">({formatToThaiDate(rawDate)})</span>
+                  {isSelfDev ? "วันที่เข้าร่วม *" : "วันที่นิเทศ *"} <span className="text-blue-600 font-normal">({formatToThaiDate(rawDate)})</span>
                 </label>
                 <input
                   type="date"
@@ -266,12 +251,8 @@ export default function SupervisionFormPage() {
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
-              {/* 2. เวลานิเทศ (00:00 - 24:00 น.) */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  เวลานิเทศ (24 ชม.) *
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">เวลาดำเนินการ (24 ชม.) *</label>
                 <input
                   type="time"
                   name="time"
@@ -281,12 +262,8 @@ export default function SupervisionFormPage() {
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
-              {/* 3. Dropdown 25 อำเภอ เชียงใหม่ */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  อำเภอ / พื้นที่ (เชียงใหม่) *
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">พื้นที่ / รูปแบบ *</label>
                 <select
                   name="district"
                   value={formData.district}
@@ -296,107 +273,96 @@ export default function SupervisionFormPage() {
                 >
                   {CHIANG_MAI_DISTRICTS.map((dist) => (
                     <option key={dist} value={dist}>
-                      อ.{dist}
+                      {dist.includes("ออนไลน์") ? dist : `อ.${dist}`}
                     </option>
                   ))}
                 </select>
               </div>
-
               <div className="md:col-span-3">
-                <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อสถานศึกษา / หน่วยงานที่เข้านิเทศ *</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  {isSelfDev ? "หน่วยงานที่จัด / สถาบัน / แพลตฟอร์ม *" : "ชื่อสถานศึกษา / หน่วยงานที่เข้านิเทศ *"}
+                </label>
                 <input
                   type="text"
                   name="schoolName"
                   value={formData.schoolName}
                   onChange={handleChange}
-                  placeholder="ระบุชื่อโรงเรียน เช่น โรงเรียนวัดดอนจั่น"
+                  placeholder={isSelfDev ? "เช่น สำนักงานเลขาธิการคุรุสภา, สพฐ., มหาวิทยาลัยเชียงใหม่" : "ระบุชื่อโรงเรียน เช่น โรงเรียนวัดดอนจั่น"}
                   required
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
-              <FolderCheck className="w-4 h-4 text-amber-600" />
-              2. โครงการ/กิจกรรม และโฟลเดอร์จัดเก็บ (PA 2570)
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">เลือกกิจกรรม (Google Drive ปลายทาง) *</label>
-                <select
-                  name="activityFolderId"
-                  value={formData.activityFolderId}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                >
-                  {PA_ACTIVITIES.map((act) => (
-                    <option key={act.id} value={act.id}>{act.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">วัตถุประสงค์การนิเทศ</label>
+              <div className="md:col-span-3">
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  {isSelfDev ? "ชื่อหลักสูตร / หัวข้อการอบรม-สัมมนา *" : "วัตถุประสงค์การนิเทศ"}
+                </label>
                 <input
                   type="text"
                   name="objective"
                   value={formData.objective}
                   onChange={handleChange}
-                  placeholder="ระบุวัตถุประสงค์"
+                  placeholder={isSelfDev ? "เช่น หลักสูตรการประยุกต์ใช้ Generative AI ในการจัดการศึกษา" : "เช่น เพื่อติดตามการจัดการเรียนรู้เชิงรุก (Active Learning)"}
+                  required={isSelfDev}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           </div>
 
+          {/* หมวดที่ 2: สาระสำคัญ */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <FileText className="w-4 h-4 text-emerald-600" />
-              3. บันทึกผลการนิเทศและข้อเสนอแนะ
+              {isSelfDev ? "2. สรุปผลการเรียนรู้และการนำไปใช้" : "2. บันทึกผลการนิเทศและข้อเสนอแนะ"}
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">ประเด็นที่พบ / จุดเด่น (Strengths)</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  {isSelfDev ? "องค์ความรู้สำคัญที่ได้รับ (Key Takeaways)" : "ประเด็นที่พบ / จุดเด่น (Strengths)"}
+                </label>
                 <textarea
                   name="strengths"
                   rows={2}
                   value={formData.strengths}
                   onChange={handleChange}
-                  placeholder="จุดเด่นที่พบ"
+                  placeholder={isSelfDev ? "สรุปใจความสำคัญ หรือทักษะใหม่ที่ได้รับจากการเรียนรู้" : "จุดเด่นที่พบในการจัดการเรียนการสอน"}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">ข้อเสนอแนะเชิงวิชาการ (Recommendations)</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  {isSelfDev ? "การนำไปประยุกต์ใช้ในงานนิเทศ/ศธจ. (Application)" : "ข้อเสนอแนะเชิงวิชาการ (Recommendations)"}
+                </label>
                 <textarea
                   name="improvements"
                   rows={2}
                   value={formData.improvements}
                   onChange={handleChange}
-                  placeholder="ข้อเสนอแนะเพื่อพัฒนา"
+                  placeholder={isSelfDev ? "แนวทางนำความรู้ไปต่อยอดในการพัฒนาครูหรือสถานศึกษา" : "ข้อเสนอแนะเพื่อพัฒนา"}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">ข้อตกลงร่วม / แนวทางติดตามผล (Agreements)</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  {isSelfDev ? "จำนวนชั่วโมง / บันทึกเพิ่มเติม" : "ข้อตกลงร่วม / แนวทางติดตามผล (Agreements)"}
+                </label>
                 <textarea
                   name="agreements"
                   rows={2}
                   value={formData.agreements}
                   onChange={handleChange}
-                  placeholder="ข้อตกลงร่วมกับครู/โรงเรียน"
+                  placeholder={isSelfDev ? "เช่น จำนวน 6 ชั่วโมง, ได้รับเกียรติบัตรเรียบร้อย" : "ข้อตกลงร่วมกับครู/โรงเรียน"}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           </div>
 
-          {/* แนบภาพถ่าย */}
+          {/* แนบรูปถ่าย / เกียรติบัตร */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <Camera className="w-4 h-4 text-purple-600" />
-              4. ภาพถ่ายกิจกรรมการนิเทศ (แนบลง Google Docs อัตโนมัติ)
+              {isSelfDev ? "3. ภาพถ่ายเกียรติบัตร / ร่องรอยการเรียนรู้" : "3. ภาพถ่ายกิจกรรมการนิเทศ"}
             </h2>
             <div className="space-y-3">
               <input
@@ -421,16 +387,16 @@ export default function SupervisionFormPage() {
               isLoading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
             }`}
           >
-            {isLoading ? "กำลังบันทึกข้อมูลและส่งไฟล์ลง Drive..." : "บันทึกข้อมูลและสร้างเอกสารลง Drive"}
+            {isLoading ? "กำลังบันทึกข้อมูลและส่งไฟล์ลง Drive..." : (isSelfDev ? "บันทึกข้อมูลการพัฒนาตนเอง" : "บันทึกข้อมูลการนิเทศ")}
           </button>
         </form>
       </div>
 
-      {/* ประวัติการนิเทศ */}
+      {/* ประวัติย้อนหลัง */}
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 space-y-4">
         <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 border-b pb-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          ประวัติการนิเทศทั้งหมด ({historyLogs.length} รายการ)
+          ประวัติการบันทึกทั้งหมด ({historyLogs.length} รายการ)
         </h3>
 
         {historyLogs.length === 0 ? (
@@ -444,12 +410,12 @@ export default function SupervisionFormPage() {
                     {log.schoolName} ({log.district})
                   </span>
                   <span className="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">
-                    {log.date} เวลา {log.time}
+                    {log.date}
                   </span>
                 </div>
                 <div className="text-xs text-amber-800">📁 {log.activityLabel}</div>
-                {log.strengths && <p className="text-xs text-slate-600"><strong>จุดเด่น:</strong> {log.strengths}</p>}
-                {log.improvements && <p className="text-xs text-slate-600"><strong>ข้อเสนอแนะ:</strong> {log.improvements}</p>}
+                {log.objective && <p className="text-xs text-slate-600"><strong>เรื่อง/หลักสูตร:</strong> {log.objective}</p>}
+                {log.strengths && <p className="text-xs text-slate-600 line-clamp-1"><strong>สาระสำคัญ:</strong> {log.strengths}</p>}
               </div>
             ))}
           </div>
