@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar, Camera, BarChart3, RefreshCw, Layers } from "lucide-react";
 
+// รายการหมวดหมู่กิจกรรม PA 2570
 const PA_ACTIVITIES = [
   { id: "1K82qP0IeKyS40jzDcv4dA-cfcur0zxmw", label: "ส่วนที่ 2 ข้อตกลงตามตำแหน่ง 70" },
   { id: "1bPJCLdTWKD2yMYQXvXcZNs__m-W9jAMV", label: "ส่วนที่ 3 ข้อตกลงตามประเด็นท้าทาย 70" },
@@ -21,14 +22,51 @@ const PA_ACTIVITIES = [
   { id: "1GXKnx3_gyEv5B-fXAhEADMWA_8Lxt8Yb", label: "ส่วนที่ 16 AI for digital art 70" },
 ];
 
-// *** ใส่ Web App URL ของท่านตรงนี้ ***
+// รายชื่อ 25 อำเภอในจังหวัดเชียงใหม่
+const CHIANG_MAI_DISTRICTS = [
+  "เมืองเชียงใหม่",
+  "จอมทอง",
+  "แม่แจ่ม",
+  "เชียงดาว",
+  "ดอยสะเก็ด",
+  "แม่แตง",
+  "แม่ริม",
+  "สะเมิง",
+  "ฝาง",
+  "แม่อาย",
+  "พร้าว",
+  "สันป่าตอง",
+  "สันกำแพง",
+  "สันทราย",
+  "หางดง",
+  "ฮอด",
+  "ดอยเต่า",
+  "อมก๋อย",
+  "สารภี",
+  "เวียงแหง",
+  "ไชยปราการ",
+  "แม่วาง",
+  "แม่ออน",
+  "ดอยหล่อ",
+  "กัลยาณิวัฒนา"
+];
+
+// *** ตรวจสอบและใส่ Web App URL ของท่านตรงนี้ ***
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz_svWuKBgvw6tsa3kPAis4saZZAf4odPWhasf9D8WlzQ6BuJG70EqwKqkahoRdh_RU/exec";
 
+// ฟังก์ชันแปลง ค.ศ. (YYYY-MM-DD) เป็น วัน/เดือน/พ.ศ.
+const formatToThaiDate = (isoDate: string) => {
+  if (!isoDate) return "";
+  const [year, month, day] = isoDate.split("-");
+  const thaiYear = parseInt(year, 10) + 543;
+  return `${day}/${month}/${thaiYear}`;
+};
+
 export default function SupervisionFormPage() {
+  const [rawDate, setRawDate] = useState(new Date().toISOString().split("T")[0]);
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split("T")[0],
     time: "09:00",
-    district: "เมืองเชียงใหม่",
+    district: CHIANG_MAI_DISTRICTS[0],
     schoolName: "",
     activityFolderId: PA_ACTIVITIES[8].id,
     objective: "",
@@ -69,7 +107,6 @@ export default function SupervisionFormPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ย่อรูปภาพให้มีขนาดเล็กกะทัดรัดก่อนส่ง (ไม่เกิน 800px)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -93,7 +130,6 @@ export default function SupervisionFormPage() {
         const ctx = canvas.getContext("2d");
         ctx?.drawImage(img, 0, 0, width, height);
 
-        // บีบอัดคุณภาพรูป 0.6 เพื่อให้ส่งผ่าน API ได้รวดเร็ว
         const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
         setPhotoPreview(dataUrl);
         setPhotoBase64(dataUrl);
@@ -107,15 +143,18 @@ export default function SupervisionFormPage() {
     e.preventDefault();
     setIsLoading(true);
 
+    const thaiFormattedDate = formatToThaiDate(rawDate);
     const activityObj = PA_ACTIVITIES.find((a) => a.id === formData.activityFolderId);
+    
     const payload = {
       ...formData,
+      date: thaiFormattedDate, // ส่งวันที่ในรูปแบบ วัน/เดือน/พ.ศ.
+      time: `${formData.time} น.`, // ส่งเวลาในระบบ 24 ชม. พร้อมระบุ น.
       activityLabel: activityObj?.label || "",
       photoBase64: photoBase64,
     };
 
     try {
-      // ส่งข้อมูลแบบ text/plain เพื่อป้องกัน CORS Preflight Block
       await fetch(GAS_API_URL, {
         method: "POST",
         mode: "no-cors",
@@ -123,7 +162,6 @@ export default function SupervisionFormPage() {
         body: JSON.stringify(payload),
       });
 
-      // โหมด no-cors จะรับค่า response ไม่ได้โดยตรง แต่ข้อมูลวิ่งเข้า Google Drive / Sheets แล้ว
       setSuccessMsg("บันทึกข้อมูล ภาพถ่าย และสร้าง Google Docs สำเร็จเรียบร้อย!");
       setPhotoBase64("");
       setPhotoPreview("");
@@ -136,7 +174,6 @@ export default function SupervisionFormPage() {
         agreements: "",
       }));
 
-      // รอ 3 วินาทีแล้วโหลดประวัติใหม่
       setTimeout(() => {
         fetchHistory();
       }, 3000);
@@ -190,7 +227,7 @@ export default function SupervisionFormPage() {
             <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><Layers className="w-5 h-5" /></div>
             <div>
               <div className="text-xs text-slate-500">สถานะฐานข้อมูล</div>
-              <div className="text-xs font-semibold text-emerald-600">Google Drive พร้อมใช้งาน</div>
+              <div className="text-xs font-semibold text-emerald-600">Google Drive เชื่อมต่อแล้ว</div>
             </div>
           </div>
           <button onClick={fetchHistory} title="รีเฟรชประวัติ" className="text-slate-400 hover:text-slate-700">
@@ -215,39 +252,56 @@ export default function SupervisionFormPage() {
               1. ข้อมูลทั่วไปและการลงพื้นที่
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* 1. วันที่นิเทศ (แสดง พ.ศ. กำกับ) */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">วันที่นิเทศ *</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  วันที่นิเทศ * <span className="text-blue-600 font-normal">({formatToThaiDate(rawDate)})</span>
+                </label>
                 <input
                   type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
+                  value={rawDate}
+                  onChange={(e) => setRawDate(e.target.value)}
                   required
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              {/* 2. เวลานิเทศ (00:00 - 24:00 น.) */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">เวลานิเทศ</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  เวลานิเทศ (24 ชม.) *
+                </label>
                 <input
                   type="time"
                   name="time"
                   value={formData.time}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">อำเภอ / พื้นที่ *</label>
-                <input
-                  type="text"
-                  name="district"
-                  value={formData.district}
-                  onChange={handleChange}
-                  placeholder="เช่น เมืองเชียงใหม่"
                   required
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              {/* 3. Dropdown 25 อำเภอ เชียงใหม่ */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  อำเภอ / พื้นที่ (เชียงใหม่) *
+                </label>
+                <select
+                  name="district"
+                  value={formData.district}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                >
+                  {CHIANG_MAI_DISTRICTS.map((dist) => (
+                    <option key={dist} value={dist}>
+                      อ.{dist}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="md:col-span-3">
                 <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อสถานศึกษา / หน่วยงานที่เข้านิเทศ *</label>
                 <input
@@ -255,7 +309,7 @@ export default function SupervisionFormPage() {
                   name="schoolName"
                   value={formData.schoolName}
                   onChange={handleChange}
-                  placeholder="ระบุชื่อโรงเรียน"
+                  placeholder="ระบุชื่อโรงเรียน เช่น โรงเรียนวัดดอนจั่น"
                   required
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
@@ -338,7 +392,7 @@ export default function SupervisionFormPage() {
             </div>
           </div>
 
-          {/* แนบรูปภาพ */}
+          {/* แนบภาพถ่าย */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <Camera className="w-4 h-4 text-purple-600" />
@@ -390,7 +444,7 @@ export default function SupervisionFormPage() {
                     {log.schoolName} ({log.district})
                   </span>
                   <span className="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">
-                    {log.date}
+                    {log.date} เวลา {log.time}
                   </span>
                 </div>
                 <div className="text-xs text-amber-800">📁 {log.activityLabel}</div>
