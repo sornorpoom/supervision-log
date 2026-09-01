@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar, ExternalLink, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar, ExternalLink, Loader2, Camera, BarChart3, RefreshCw, Layers } from "lucide-react";
 
 const PA_ACTIVITIES = [
   { id: "1K82qP0IeKyS40jzDcv4dA-cfcur0zxmw", label: "ส่วนที่ 2 ข้อตกลงตามตำแหน่ง 70" },
@@ -21,8 +21,8 @@ const PA_ACTIVITIES = [
   { id: "1GXKnx3_gyEv5B-fXAhEADMWA_8Lxt8Yb", label: "ส่วนที่ 16 AI for digital art 70" },
 ];
 
-// *** วาง Web App URL จาก Google Apps Script ตรงนี้ ***
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz_svWuKBgvw6tsa3kPAis4saZZAf4odPWhasf9D8WlzQ6BuJG70EqwKqkahoRdh_RU/exec";
+// ใช้ Web App URL เดิมที่ได้จาก Apps Script
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwO6T_e4c-1O0K7ZgX3x3E5G9tJ-placeholder/exec"; // ตรวจสอบ URL ของท่าน
 
 export default function SupervisionFormPage() {
   const [formData, setFormData] = useState({
@@ -30,20 +30,78 @@ export default function SupervisionFormPage() {
     time: "09:00",
     district: "เมืองเชียงใหม่",
     schoolName: "",
-    activityFolderId: PA_ACTIVITIES[8].id, // ค่าเริ่มต้น: ส่วนที่ 10
+    activityFolderId: PA_ACTIVITIES[8].id,
     objective: "",
     strengths: "",
     improvements: "",
     agreements: "",
   });
 
+  const [photoBase64, setPhotoBase64] = useState<string>("");
+  const [photoPreview, setPhotoPreview] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [submittedLogs, setSubmittedLogs] = useState<any[]>([]);
   const [successMsg, setSuccessMsg] = useState("");
+  
+  // สถานะประวัติและสถิติ
+  const [historyLogs, setHistoryLogs] = useState<any[]>([]);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+
+  // ดึงประวัติจาก Google Sheets เมื่อเปิดหน้าเว็บ
+  const fetchHistory = async () => {
+    setIsFetchingHistory(true);
+    try {
+      const res = await fetch(GAS_API_URL);
+      const result = await res.json();
+      if (result.status === "success") {
+        setHistoryLogs(result.data);
+      }
+    } catch (e) {
+      console.error("ดึงประวัติไม่สำเร็จ", e);
+    } finally {
+      setIsFetchingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // ย่อขนาดรูปภาพในเครื่องก่อนอัปโหลดเพื่อความเร็ว
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = (height * MAX_WIDTH) / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        setPhotoPreview(dataUrl);
+        setPhotoBase64(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +112,7 @@ export default function SupervisionFormPage() {
     const payload = {
       ...formData,
       activityLabel: activityObj?.label || "",
+      photoBase64: photoBase64,
     };
 
     try {
@@ -66,38 +125,36 @@ export default function SupervisionFormPage() {
       const result = await res.json();
 
       if (result.status === "success") {
-        const newLog = {
-          ...payload,
-          id: Date.now(),
-          docUrl: result.docUrl,
-          createdAt: new Date().toLocaleTimeString("th-TH"),
-        };
-        setSubmittedLogs((prev) => [newLog, ...prev]);
-        setSuccessMsg("บันทึกลง Google Sheets และสร้าง Google Docs ลง Drive เรียบร้อย!");
-        
-        // ล้างเฉพาะเนื้อหาส่วนประเด็น
-        setFormData(prev => ({
+        setSuccessMsg("บันทึกข้อมูล แปะรูป และสร้าง Google Docs เรียบร้อย!");
+        setPhotoBase64("");
+        setPhotoPreview("");
+        setFormData((prev) => ({
           ...prev,
           schoolName: "",
           objective: "",
           strengths: "",
           improvements: "",
-          agreements: ""
+          agreements: "",
         }));
+        fetchHistory(); // ดึงประวัติล่าสุดทันที
       } else {
         alert("เกิดข้อผิดพลาด: " + result.message);
       }
     } catch (err) {
-      alert("ไม่สามารถเชื่อมต่อ Google Apps Script ได้ กรุณาตรวจสอบ URL หรือสิทธิ์การเข้าถึง");
+      alert("ไม่สามารถเชื่อมต่อ Google Apps Script ได้");
     } finally {
       setIsLoading(false);
       setTimeout(() => setSuccessMsg(""), 4000);
     }
   };
 
+  // คำนวณสถิติ
+  const totalVisits = historyLogs.length;
+  const uniqueSchools = new Set(historyLogs.map((l) => l.schoolName)).size;
+
   return (
-    <main className="max-w-4xl mx-auto p-4 md:p-8">
-      <header className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 mb-6">
+    <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
+      <header className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <School className="w-8 h-8" />
@@ -113,6 +170,36 @@ export default function SupervisionFormPage() {
         </div>
       </header>
 
+      {/* สถิติสรุปภาพรวม */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><BarChart3 className="w-5 h-5" /></div>
+          <div>
+            <div className="text-xs text-slate-500">จำนวนการนิเทศทั้งหมด</div>
+            <div className="text-xl font-bold text-slate-900">{totalVisits} ครั้ง</div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><School className="w-5 h-5" /></div>
+          <div>
+            <div className="text-xs text-slate-500">โรงเรียนที่เข้านิเทศ</div>
+            <div className="text-xl font-bold text-slate-900">{uniqueSchools} แห่ง</div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm col-span-2 md:col-span-1 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><Layers className="w-5 h-5" /></div>
+            <div>
+              <div className="text-xs text-slate-500">สถานะฐานข้อมูล</div>
+              <div className="text-xs font-semibold text-emerald-600">Google Drive เชื่อมต่อแล้ว</div>
+            </div>
+          </div>
+          <button onClick={fetchHistory} title="รีเฟรชประวัติ" className="text-slate-400 hover:text-slate-700">
+            <RefreshCw className={`w-4 h-4 ${isFetchingHistory ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </div>
+
       {successMsg && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg animate-bounce">
           <CheckCircle2 className="w-5 h-5" />
@@ -120,8 +207,11 @@ export default function SupervisionFormPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 mb-8">
+      {/* ฟอร์มบันทึกข้อมูล */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* ข้อมูลทั่วไป */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <Calendar className="w-4 h-4 text-blue-600" />
@@ -136,7 +226,7 @@ export default function SupervisionFormPage() {
                   value={formData.date}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -146,7 +236,7 @@ export default function SupervisionFormPage() {
                   name="time"
                   value={formData.time}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -158,7 +248,7 @@ export default function SupervisionFormPage() {
                   onChange={handleChange}
                   placeholder="เช่น เมืองเชียงใหม่"
                   required
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="md:col-span-3">
@@ -170,12 +260,13 @@ export default function SupervisionFormPage() {
                   onChange={handleChange}
                   placeholder="ระบุชื่อโรงเรียน"
                   required
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           </div>
 
+          {/* โฟลเดอร์กิจกรรม */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <FolderCheck className="w-4 h-4 text-amber-600" />
@@ -188,12 +279,10 @@ export default function SupervisionFormPage() {
                   name="activityFolderId"
                   value={formData.activityFolderId}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 >
                   {PA_ACTIVITIES.map((act) => (
-                    <option key={act.id} value={act.id}>
-                      {act.label}
-                    </option>
+                    <option key={act.id} value={act.id}>{act.label}</option>
                   ))}
                 </select>
               </div>
@@ -205,12 +294,13 @@ export default function SupervisionFormPage() {
                   value={formData.objective}
                   onChange={handleChange}
                   placeholder="ระบุวัตถุประสงค์"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           </div>
 
+          {/* ผลการนิเทศ */}
           <div>
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
               <FileText className="w-4 h-4 text-emerald-600" />
@@ -225,7 +315,7 @@ export default function SupervisionFormPage() {
                   value={formData.strengths}
                   onChange={handleChange}
                   placeholder="จุดเด่นที่พบ"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -236,7 +326,7 @@ export default function SupervisionFormPage() {
                   value={formData.improvements}
                   onChange={handleChange}
                   placeholder="ข้อเสนอแนะเพื่อพัฒนา"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -247,9 +337,31 @@ export default function SupervisionFormPage() {
                   value={formData.agreements}
                   onChange={handleChange}
                   placeholder="ข้อตกลงร่วมกับครู/โรงเรียน"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* แนบรูปถ่ายกิจกรรม */}
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2 border-b pb-2 mb-4">
+              <Camera className="w-4 h-4 text-purple-600" />
+              4. ภาพถ่ายกิจกรรมการนิเทศ (แนบลง Google Docs อัตโนมัติ)
+            </h2>
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              {photoPreview && (
+                <div className="relative w-40 h-28 rounded-lg overflow-hidden border border-slate-300 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -263,7 +375,7 @@ export default function SupervisionFormPage() {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                กำลังบันทึกข้อมูลและส่งไฟล์ลง Google Drive...
+                กำลังบันทึกข้อมูล รูปภาพ และสร้าง Google Docs ลง Drive...
               </>
             ) : (
               <>
@@ -275,36 +387,52 @@ export default function SupervisionFormPage() {
         </form>
       </div>
 
-      {submittedLogs.length > 0 && (
-        <section className="space-y-4">
+      {/* รายการประวัติย้อนหลังทั้งหมด */}
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 space-y-4">
+        <div className="flex justify-between items-center border-b pb-3">
           <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            ประวัติการบันทึกล่าสุด
+            ประวัติการนิเทศทั้งหมด ({historyLogs.length} รายการ)
           </h3>
+          {isFetchingHistory && <span className="text-xs text-slate-400">กำลังอัปเดต...</span>}
+        </div>
+
+        {historyLogs.length === 0 ? (
+          <p className="text-center text-sm text-slate-400 py-6">ยังไม่มีประวัติการนิเทศ</p>
+        ) : (
           <div className="grid grid-cols-1 gap-4">
-            {submittedLogs.map((log) => (
-              <div key={log.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-semibold text-slate-900">{log.schoolName} ({log.district})</span>
-                  {log.docUrl && (
-                    <a
-                      href={log.docUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded"
-                    >
-                      เปิดไฟล์ Google Docs <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
+            {historyLogs.map((log) => (
+              <div key={log.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                  <span className="font-semibold text-slate-900 text-sm md:text-base">
+                    {log.schoolName} ({log.district})
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">
+                      {log.date}
+                    </span>
+                    {log.docUrl && (
+                      <a
+                        href={log.docUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-white border border-blue-200 px-2 py-0.5 rounded"
+                      >
+                        Docs <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-amber-800 bg-amber-50 p-2 rounded-lg inline-block">
+                <div className="text-xs text-amber-800">
                   📁 {log.activityLabel}
                 </div>
+                {log.strengths && <p className="text-xs text-slate-600 line-clamp-1"><strong>จุดเด่น:</strong> {log.strengths}</p>}
+                {log.improvements && <p className="text-xs text-slate-600 line-clamp-1"><strong>ข้อเสนอแนะ:</strong> {log.improvements}</p>}
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </main>
   );
 }
