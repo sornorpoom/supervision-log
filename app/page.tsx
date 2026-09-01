@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar } from "lucide-react";
+import { FolderCheck, Send, CheckCircle2, FileText, School, Calendar, ExternalLink, Loader2 } from "lucide-react";
 
 const PA_ACTIVITIES = [
   { id: "1K82qP0IeKyS40jzDcv4dA-cfcur0zxmw", label: "ส่วนที่ 2 ข้อตกลงตามตำแหน่ง 70" },
@@ -21,38 +21,78 @@ const PA_ACTIVITIES = [
   { id: "1GXKnx3_gyEv5B-fXAhEADMWA_8Lxt8Yb", label: "ส่วนที่ 16 AI for digital art 70" },
 ];
 
+// *** วาง Web App URL จาก Google Apps Script ตรงนี้ ***
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz_svWuKBgvw6tsa3kPAis4saZZAf4odPWhasf9D8WlzQ6BuJG70EqwKqkahoRdh_RU/exec";
+
 export default function SupervisionFormPage() {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
     time: "09:00",
     district: "เมืองเชียงใหม่",
     schoolName: "",
-    activityFolderId: PA_ACTIVITIES[8].id,
+    activityFolderId: PA_ACTIVITIES[8].id, // ค่าเริ่มต้น: ส่วนที่ 10
     objective: "",
     strengths: "",
     improvements: "",
     agreements: "",
   });
 
+  const [isLoading, setIsLoading] = useState(false);
   const [submittedLogs, setSubmittedLogs] = useState<any[]>([]);
-  const [showToast, setShowToast] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newLog = {
+    setIsLoading(true);
+
+    const activityObj = PA_ACTIVITIES.find((a) => a.id === formData.activityFolderId);
+    const payload = {
       ...formData,
-      id: Date.now(),
-      activityLabel: PA_ACTIVITIES.find((a) => a.id === formData.activityFolderId)?.label,
-      createdAt: new Date().toLocaleTimeString("th-TH"),
+      activityLabel: activityObj?.label || "",
     };
-    setSubmittedLogs((prev) => [newLog, ...prev]);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+
+    try {
+      const res = await fetch(GAS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+
+      if (result.status === "success") {
+        const newLog = {
+          ...payload,
+          id: Date.now(),
+          docUrl: result.docUrl,
+          createdAt: new Date().toLocaleTimeString("th-TH"),
+        };
+        setSubmittedLogs((prev) => [newLog, ...prev]);
+        setSuccessMsg("บันทึกลง Google Sheets และสร้าง Google Docs ลง Drive เรียบร้อย!");
+        
+        // ล้างเฉพาะเนื้อหาส่วนประเด็น
+        setFormData(prev => ({
+          ...prev,
+          schoolName: "",
+          objective: "",
+          strengths: "",
+          improvements: "",
+          agreements: ""
+        }));
+      } else {
+        alert("เกิดข้อผิดพลาด: " + result.message);
+      }
+    } catch (err) {
+      alert("ไม่สามารถเชื่อมต่อ Google Apps Script ได้ กรุณาตรวจสอบ URL หรือสิทธิ์การเข้าถึง");
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setSuccessMsg(""), 4000);
+    }
   };
 
   return (
@@ -73,10 +113,10 @@ export default function SupervisionFormPage() {
         </div>
       </header>
 
-      {showToast && (
+      {successMsg && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg animate-bounce">
           <CheckCircle2 className="w-5 h-5" />
-          <span>บันทึกข้อมูลตัวอย่างสำเร็จ (รอบทดสอบ UI)</span>
+          <span>{successMsg}</span>
         </div>
       )}
 
@@ -143,7 +183,7 @@ export default function SupervisionFormPage() {
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">เลือกกิจกรรม (Google Drive) *</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">เลือกกิจกรรม (Google Drive ปลายทาง) *</label>
                 <select
                   name="activityFolderId"
                   value={formData.activityFolderId}
@@ -164,7 +204,7 @@ export default function SupervisionFormPage() {
                   name="objective"
                   value={formData.objective}
                   onChange={handleChange}
-                  placeholder="เช่น นิเทศติดตามการจัดการเรียนรู้เชิงรุก (Active Learning)"
+                  placeholder="ระบุวัตถุประสงค์"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -215,10 +255,22 @@ export default function SupervisionFormPage() {
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl shadow-sm transition"
+            disabled={isLoading}
+            className={`w-full flex items-center justify-center gap-2 text-white font-medium py-3 px-6 rounded-xl shadow-sm transition ${
+              isLoading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            <Send className="w-4 h-4" />
-            บันทึกข้อมูลการนิเทศ (ทดสอบรอบที่ 1)
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                กำลังบันทึกข้อมูลและส่งไฟล์ลง Google Drive...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                บันทึกข้อมูลและสร้างเอกสารลง Drive
+              </>
+            )}
           </button>
         </form>
       </div>
@@ -227,24 +279,27 @@ export default function SupervisionFormPage() {
         <section className="space-y-4">
           <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            ประวัติการบันทึกในการทดสอบรอบนี้ ({submittedLogs.length} รายการ)
+            ประวัติการบันทึกล่าสุด
           </h3>
           <div className="grid grid-cols-1 gap-4">
             {submittedLogs.map((log) => (
               <div key={log.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
                 <div className="flex justify-between items-center border-b pb-2">
                   <span className="font-semibold text-slate-900">{log.schoolName} ({log.district})</span>
-                  <span className="text-xs bg-blue-50 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-                    {log.date} เวลา {log.time}
-                  </span>
+                  {log.docUrl && (
+                    <a
+                      href={log.docUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded"
+                    >
+                      เปิดไฟล์ Google Docs <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
                 <div className="text-xs text-amber-800 bg-amber-50 p-2 rounded-lg inline-block">
                   📁 {log.activityLabel}
                 </div>
-                {log.objective && <p className="text-sm text-slate-600"><strong>วัตถุประสงค์:</strong> {log.objective}</p>}
-                {log.strengths && <p className="text-sm text-slate-600"><strong>จุดเด่น:</strong> {log.strengths}</p>}
-                {log.improvements && <p className="text-sm text-slate-600"><strong>ข้อเสนอแนะ:</strong> {log.improvements}</p>}
-                {log.agreements && <p className="text-sm text-slate-600"><strong>ข้อตกลงร่วม:</strong> {log.agreements}</p>}
               </div>
             ))}
           </div>
